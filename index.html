@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>어린이 4마디 악보 작곡가</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for Sound Synthesis -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Gaegu & Nanum Gothic) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Nanum Gothic', sans-serif;
+            background-color: #f0fdf4;
+        }
+        .font-gaegu {
+            font-family: 'Gaegu', cursive;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #86efac;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4ade80;
+        }
+        .note-btn.active {
+            border-color: #16a34a;
+            background-color: #dcfce7;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12 flex flex-col items-center">
+
+    <!-- Header Section -->
+    <header class="w-full max-w-4xl mt-6 px-4 text-center">
+        <div class="bg-white rounded-3xl p-6 shadow-lg border-4 border-green-300 relative overflow-hidden">
+            <div class="absolute -top-4 -left-4 w-16 h-16 bg-yellow-300 rounded-full opacity-50 blur-sm"></div>
+            <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-emerald-300 rounded-full opacity-50 blur-sm"></div>
+            
+            <h1 class="text-3xl md:text-5xl font-extrabold text-emerald-600 font-gaegu tracking-wide drop-shadow-sm">
+                🎵 신나는 4마디 악보 작곡가 🎶
+            </h1>
+            <p class="text-xs md:text-base text-slate-600 mt-2 font-semibold">
+                음표와 쉼표를 골라 악보를 만들고, 조표도 붙여보며 나만의 노래를 들어보세요!
+            </p>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="w-full max-w-5xl px-4 mt-6 flex flex-col gap-6">
+
+        <!-- Controls Bar: Key Signatures, Octave, Play Control -->
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-md border-2 border-emerald-200 flex flex-wrap gap-4 items-center justify-between">
+            
+            <!-- 조표 선택 (Key Signature) -->
+            <div class="flex items-center gap-2">
+                <label for="key-select" class="font-bold text-sm md:text-base text-emerald-800 flex items-center gap-1">
+                    <i class="fa-solid fa-key text-yellow-500"></i> 조표 설정:
+                </label>
+                <select id="key-select" class="bg-emerald-50 border-2 border-emerald-300 rounded-xl px-3 py-1.5 text-sm md:text-base font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    <option value="C">C Major (다장조 - 제자리)</option>
+                    <option value="G">G Major (사장조 - ♯ 1개: 파♯)</option>
+                    <option value="D">D Major (라장조 - ♯ 2개: 파♯, 도♯)</option>
+                    <option value="F">F Major (바장조 - ♭ 1개: 시♭)</option>
+                    <option value="Bb">B♭ Major (내림나장조 - ♭ 2개: 시♭, 미♭)</option>
+                </select>
+            </div>
+
+            <!-- 옥타브 선택 -->
+            <div class="flex items-center gap-2">
+                <label for="octave-select" class="font-bold text-sm md:text-base text-emerald-800 flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-up-down text-blue-400"></i> 음높이 범위:
+                </label>
+                <select id="octave-select" class="bg-emerald-50 border-2 border-emerald-300 rounded-xl px-3 py-1.5 text-sm md:text-base font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                    <option value="4">보통 (4옥타브)</option>
+                    <option value="5">높음 (5옥타브)</option>
+                </select>
+            </div>
+
+            <!-- Action Buttons: Play, Clear -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+                <button id="btn-play" class="bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-base md:text-lg">
+                    <i class="fa-solid fa-play"></i> 들어보기
+                </button>
+                <button id="btn-stop" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-base hidden">
+                    <i class="fa-solid fa-square"></i> 멈춤
+                </button>
+                <button id="btn-clear" class="bg-rose-400 hover:bg-rose-500 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 text-base">
+                    <i class="fa-solid fa-rotate-left"></i> 지우기
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Note Selector Palette (음표 & 점음표 선택기) -->
+        <div class="bg-white rounded-2xl p-4 md:p-6 shadow-md border-2 border-emerald-200">
+            <h2 class="text-base md:text-lg font-bold text-emerald-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-music text-emerald-500"></i> 그려넣을 음표 / 쉼표 선택하기
+            </h2>
+            
+            <div class="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-7 gap-2 md:gap-3">
+                <!-- 온음표 -->
+                <button data-duration="1" data-dotted="false" data-type="note" class="note-btn active border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="20" cy="20" rx="8" ry="5.5" transform="rotate(-20, 20, 20)" fill="none" stroke="currentColor" stroke-width="3"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">온음표 (4박)</span>
+                </button>
+                
+                <!-- 2분음표 -->
+                <button data-duration="2" data-dotted="false" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="16" cy="24" rx="6.5" ry="4.5" transform="rotate(-20, 16, 24)" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                        <line x1="22" y1="23" x2="22" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">2분음표 (2박)</span>
+                </button>
+
+                <!-- 점2분음표 -->
+                <button data-duration="2" data-dotted="true" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="14" cy="24" rx="6" ry="4" transform="rotate(-20, 14, 24)" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                        <line x1="20" y1="23" x2="20" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="27" cy="23" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점2분음표 (3박)</span>
+                </button>
+                
+                <!-- 4분음표 -->
+                <button data-duration="4" data-dotted="false" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="16" cy="24" rx="6.5" ry="4.5" transform="rotate(-20, 16, 24)" fill="currentColor"/>
+                        <line x1="22" y1="23" x2="22" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">4분음표 (1박)</span>
+                </button>
+
+                <!-- 점4분음표 -->
+                <button data-duration="4" data-dotted="true" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="14" cy="24" rx="6" ry="4" transform="rotate(-20, 14, 24)" fill="currentColor"/>
+                        <line x1="20" y1="23" x2="20" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="27" cy="23" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점4분음표 (1.5박)</span>
+                </button>
+
+                <!-- 8분음표 -->
+                <button data-duration="8" data-dotted="false" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="14" cy="24" rx="6" ry="4" transform="rotate(-20, 14, 24)" fill="currentColor"/>
+                        <line x1="20" y1="23" x2="20" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M20,7 C25,10 26,16 22,20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">8분음표 (0.5박)</span>
+                </button>
+
+                <!-- 점8분음표 -->
+                <button data-duration="8" data-dotted="true" data-type="note" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <ellipse cx="12" cy="24" rx="5.5" ry="3.8" transform="rotate(-20, 12, 24)" fill="currentColor"/>
+                        <line x1="17" y1="23" x2="17" y2="7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M17,7 C22,10 23,16 19,20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="25" cy="23" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점8분음표 (0.75박)</span>
+                </button>
+
+                <!-- 온 쉼표 -->
+                <button data-duration="1" data-dotted="false" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <line x1="8" y1="17" x2="32" y2="17" stroke="currentColor" stroke-width="2"/>
+                        <rect x="13" y="17" width="14" height="7" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">온 쉼표 (4박)</span>
+                </button>
+
+                <!-- 2분 쉼표 -->
+                <button data-duration="2" data-dotted="false" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <line x1="8" y1="24" x2="32" y2="24" stroke="currentColor" stroke-width="2"/>
+                        <rect x="13" y="17" width="14" height="7" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">2분 쉼표 (2박)</span>
+                </button>
+
+                <!-- 점2분 쉼표 -->
+                <button data-duration="2" data-dotted="true" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <line x1="6" y1="24" x2="28" y2="24" stroke="currentColor" stroke-width="2"/>
+                        <rect x="10" y="17" width="12" height="7" fill="currentColor"/>
+                        <circle cx="33" cy="20" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점2분 쉼표 (3박)</span>
+                </button>
+
+                <!-- 4분 쉼표 -->
+                <button data-duration="4" data-dotted="false" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <path d="M 22,8 L 16,16 L 22,23 C 20,27 15,26 17,32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">4분 쉼표 (1박)</span>
+                </button>
+
+                <!-- 점4분 쉼표 -->
+                <button data-duration="4" data-dotted="true" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <path d="M 20,8 L 14,16 L 20,23 C 18,27 13,26 15,32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="28" cy="22" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점4분 쉼표 (1.5박)</span>
+                </button>
+
+                <!-- 8분 쉼표 -->
+                <button data-duration="8" data-dotted="false" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <circle cx="16" cy="14" r="2.5" fill="currentColor"/>
+                        <path d="M 17,13 C 22,12 21,18 16,28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">8분 쉼표 (0.5박)</span>
+                </button>
+
+                <!-- 점8분 쉼표 -->
+                <button data-duration="8" data-dotted="true" data-type="rest" class="note-btn border-2 border-slate-200 rounded-xl p-2 flex flex-col items-center justify-center hover:bg-emerald-50 transition cursor-pointer">
+                    <svg class="w-8 h-8" viewBox="0 0 40 40">
+                        <circle cx="14" cy="14" r="2.5" fill="currentColor"/>
+                        <path d="M 15,13 C 20,12 19,18 14,28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <circle cx="26" cy="20" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-xs font-bold text-slate-600 mt-1">점8분 쉼표 (0.75박)</span>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500 mt-3 text-center md:text-left">
+                💡 <span class="font-bold">tip:</span> 음표를 선택한 후 오선지 위 원하는 계이름 칸을 클릭하여 음표를 추가하세요! 음표를 다시 클릭하면 삭제됩니다.
+            </p>
+        </div>
+
+        <!-- Interactive Score Canvas Container -->
+        <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border-4 border-emerald-300 overflow-x-auto">
+            
+            <!-- 4 Measures Visual Container -->
+            <div id="score-container" class="min-w-[760px] flex flex-col gap-4 relative select-none">
+
+                <!-- Dynamic Status / Beat Info -->
+                <div class="flex justify-between items-center text-xs md:text-sm font-bold text-slate-600 px-2">
+                    <div class="flex gap-4">
+                        <span id="measure-1-info" class="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">1마디: 0 / 4 박</span>
+                        <span id="measure-2-info" class="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">2마디: 0 / 4 박</span>
+                        <span id="measure-3-info" class="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">3마디: 0 / 4 박</span>
+                        <span id="measure-4-info" class="bg-slate-100 px-3 py-1 rounded-full border border-slate-200">4마디: 0 / 4 박</span>
+                    </div>
+                    <span class="text-emerald-700 font-extrabold text-base">4 / 4 박자</span>
+                </div>
+
+                <!-- Canvas Component for Rendering Five-Line Staff -->
+                <div class="relative bg-amber-50/30 rounded-2xl p-4 border border-slate-200">
+                    <canvas id="staffCanvas" width="920" height="260" class="w-full cursor-pointer rounded-lg"></canvas>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Virtual Piano / Note Helper Bar -->
+        <div class="bg-white rounded-2xl p-4 shadow-md border-2 border-emerald-200 text-center">
+            <h3 class="text-sm font-bold text-emerald-800 mb-2">🎹 계이름 안내 (클릭하면 미리 소리가 납니다)</h3>
+            <div class="flex justify-center gap-1 sm:gap-2 flex-wrap">
+                <button onclick="playPitchPreview('C')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">도 (C)</button>
+                <button onclick="playPitchPreview('D')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">레 (D)</button>
+                <button onclick="playPitchPreview('E')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">미 (E)</button>
+                <button onclick="playPitchPreview('F')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">파 (F)</button>
+                <button onclick="playPitchPreview('G')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">솔 (G)</button>
+                <button onclick="playPitchPreview('A')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">라 (A)</button>
+                <button onclick="playPitchPreview('B')" class="px-3 py-2 bg-slate-100 hover:bg-emerald-100 border border-slate-300 rounded-lg text-xs sm:text-sm font-bold">시 (B)</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- App Logic -->
+    <script>
+        // --- State Management ---
+        const MAX_MEASURES = 4;
+        const BEATS_PER_MEASURE = 4; // 4/4 Time Signature
+
+        let currentKey = 'C'; // Key Signature: C, G, D, F, Bb
+        let currentOctave = 4;
+        let selectedNoteConfig = {
+            duration: '4',  // '1', '2', '4', '8'
+            isDotted: false,
+            type: 'note'    // 'note' or 'rest'
+        };
+
+        // Pitch list for Treble Clef mapping (from top to bottom)
+        // High A5 down to Middle C4 and Low B3
+        const PITCH_STEPS = [
+            { name: 'A', octOffset: 1, stepIndex: 12 }, // A5
+            { name: 'G', octOffset: 1, stepIndex: 11 }, // G5
+            { name: 'F', octOffset: 1, stepIndex: 10 }, // F5
+            { name: 'E', octOffset: 1, stepIndex: 9 },  // E5
+            { name: 'D', octOffset: 1, stepIndex: 8 },  // D5
+            { name: 'C', octOffset: 1, stepIndex: 7 },  // C5
+            { name: 'B', octOffset: 0, stepIndex: 6 },  // B4
+            { name: 'A', octOffset: 0, stepIndex: 5 },  // A4
+            { name: 'G', octOffset: 0, stepIndex: 4 },  // G4
+            { name: 'F', octOffset: 0, stepIndex: 3 },  // F4
+            { name: 'E', octOffset: 0, stepIndex: 2 },  // E4
+            { name: 'D', octOffset: 0, stepIndex: 1 },  // D4
+            { name: 'C', octOffset: 0, stepIndex: 0 },  // C4 (Middle C)
+            { name: 'B', octOffset: -1, stepIndex: -1 } // B3
+        ];
+
+        // Key Signatures alteration definition (Sharps/Flats)
+        const KEY_ALTERATIONS = {
+            'C': {},
+            'G': { 'F': '#' },
+            'D': { 'F': '#', 'C': '#' },
+            'F': { 'B': 'b' },
+            'Bb': { 'B': 'b', 'E': 'b' }
+        };
+
+        // Store active notes per measure
+        // Array of 4 measures. Each measure contains array of note objects
+        let measuresData = [
+            [], [], [], []
+        ];
+
+        // Tone.js Synth Initialization
+        let synth;
+        let isPlaying = false;
+        let playTimeoutId = null;
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('staffCanvas');
+        const ctx = canvas.getContext('2d');
+        const keySelect = document.getElementById('key-select');
+        const octaveSelect = document.getElementById('octave-select');
+        const btnPlay = document.getElementById('btn-play');
+        const btnStop = document.getElementById('btn-stop');
+        const btnClear = document.getElementById('btn-clear');
+        const noteButtons = document.querySelectorAll('.note-btn');
+
+        // --- Init Audio Synthesizer ---
+        function initSynth() {
+            if (!synth) {
+                synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.02, decay: 0.1, sustain: 0.4, release: 0.8 }
+                }).toDestination();
+                synth.volume.value = -6; // Soft volume
+            }
+        }
+
+        function playPitchPreview(noteName) {
+            initSynth();
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            const fullNote = applyKeySignature(noteName, currentOctave);
+            synth.triggerAttackRelease(fullNote, '8n');
+        }
+
+        // Apply Sharp/Flat based on current key signature
+        function applyKeySignature(pitchName, octave) {
+            const alterations = KEY_ALTERATIONS[currentKey] || {};
+            let alt = alterations[pitchName] || '';
+            return `${pitchName}${alt}${octave}`;
+        }
+
+        // Calculate note beat value
+        function getBeatValue(durationStr, isDotted) {
+            let base = 0;
+            switch(durationStr) {
+                case '1': base = 4; break;
+                case '2': base = 2; break;
+                case '4': base = 1; break;
+                case '8': base = 0.5; break;
+            }
+            return isDotted ? base * 1.5 : base;
+        }
+
+        // --- Event Listeners ---
+
+        // Palette Selector Click
+        noteButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                noteButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                selectedNoteConfig.duration = btn.getAttribute('data-duration');
+                selectedNoteConfig.isDotted = btn.getAttribute('data-dotted') === 'true';
+                selectedNoteConfig.type = btn.getAttribute('data-type');
+            });
+        });
+
+        // Key Signature Select Change
+        keySelect.addEventListener('change', (e) => {
+            currentKey = e.target.value;
+            drawStaff();
+        });
+
+        // Octave Select Change
+        octaveSelect.addEventListener('change', (e) => {
+            currentOctave = parseInt(e.target.value, 10);
+            drawStaff();
+        });
+
+        // Clear All Notes
+        btnClear.addEventListener('click', () => {
+            measuresData = [[], [], [], []];
+            updateBeatInfo();
+            drawStaff();
+        });
+
+        // Play Audio Sequence
+        btnPlay.addEventListener('click', async () => {
+            if (isPlaying) return;
+            initSynth();
+            await Tone.start();
+
+            // Check if there are notes to play
+            const totalNotes = measuresData.reduce((acc, m) => acc + m.length, 0);
+            if (totalNotes === 0) {
+                alert('악보에 먼저 음표를 추가해 주세요!');
+                return;
+            }
+
+            isPlaying = true;
+            btnPlay.classList.add('hidden');
+            btnStop.classList.remove('hidden');
+
+            const bpm = 100;
+            const quarterNoteDuration = 60 / bpm; // Seconds per beat
+
+            let timeOffset = 0;
+
+            // Iterate measures and play
+            for (let mIdx = 0; mIdx < MAX_MEASURES; mIdx++) {
+                const measure = measuresData[mIdx];
+                for (let nIdx = 0; nIdx < measure.length; nIdx++) {
+                    const note = measure[nIdx];
+                    const beats = getBeatValue(note.duration, note.isDotted);
+                    const durationInSeconds = beats * quarterNoteDuration;
+
+                    if (!isPlaying) break;
+
+                    // Highlight current playing note
+                    playTimeoutId = setTimeout(() => {
+                        drawStaff(mIdx, nIdx);
+                        if (note.type === 'note') {
+                            const noteToPlay = applyKeySignature(note.pitch, currentOctave + note.octOffset);
+                            synth.triggerAttackRelease(noteToPlay, durationInSeconds * 0.9);
+                        }
+                    }, timeOffset * 1000);
+
+                    timeOffset += durationInSeconds;
+                }
+            }
+
+            // Reset after finishing
+            setTimeout(() => {
+                stopPlayback();
+            }, timeOffset * 1000 + 200);
+        });
+
+        // Stop Playback
+        btnStop.addEventListener('click', () => {
+            stopPlayback();
+        });
+
+        function stopPlayback() {
+            isPlaying = false;
+            if (playTimeoutId) clearTimeout(playTimeoutId);
+            btnPlay.classList.remove('hidden');
+            btnStop.classList.add('hidden');
+            drawStaff();
+        }
+
+        // Handle Canvas Click (Adding/Deleting Notes)
+        canvas.addEventListener('click', (e) => {
+            if (isPlaying) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
+
+            // Staff Layout Math Parameters
+            const startX = 120; // After clef & key signature
+            const endX = canvas.width - 20;
+            const measureWidth = (endX - startX) / MAX_MEASURES;
+
+            // 1. Determine Measure Index
+            if (clickX < startX || clickX > endX) return;
+            const measureIdx = Math.floor((clickX - startX) / measureWidth);
+            if (measureIdx < 0 || measureIdx >= MAX_MEASURES) return;
+
+            // 2. Determine Y Position -> Pitch
+            const lineSpacing = 16;
+            const topStaffY = 70; // Top line (F5)
+
+            // Hit test nearest pitch step
+            let closestPitch = null;
+            let minDistance = 999;
+
+            PITCH_STEPS.forEach(p => {
+                // F5 (stepIndex 10) is at top line y = 70
+                // Each step index change corresponds to lineSpacing / 2 (8px)
+                const pitchY = topStaffY + (10 - p.stepIndex) * (lineSpacing / 2);
+                const dist = Math.abs(clickY - pitchY);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestPitch = { ...p, targetY: pitchY };
+                }
+            });
+
+            if (!closestPitch || minDistance > 16) return; // Clicked too far
+
+            // 3. Check for existing note deletion (Click near an existing note)
+            const currentMeasureNotes = measuresData[measureIdx];
+            const currentBeats = currentMeasureNotes.reduce((sum, n) => sum + getBeatValue(n.duration, n.isDotted), 0);
+            
+            // Note X Positions inside Measure
+            let accumBeats = 0;
+            let clickedNoteIndex = -1;
+
+            for (let i = 0; i < currentMeasureNotes.length; i++) {
+                const n = currentMeasureNotes[i];
+                const noteBeat = getBeatValue(n.duration, n.isDotted);
+                const noteX = startX + (measureIdx * measureWidth) + ((accumBeats + noteBeat / 2) / BEATS_PER_MEASURE) * measureWidth;
+                
+                const distanceToNote = Math.hypot(clickX - noteX, clickY - closestPitch.targetY);
+                if (distanceToNote < 18) {
+                    clickedNoteIndex = i;
+                    break;
+                }
+                accumBeats += noteBeat;
+            }
+
+            // Deletion Action
+            if (clickedNoteIndex !== -1) {
+                currentMeasureNotes.splice(clickedNoteIndex, 1);
+                updateBeatInfo();
+                drawStaff();
+                return;
+            }
+
+            // 4. Addition Action: Check Measure Capacity
+            const newNoteBeat = getBeatValue(selectedNoteConfig.duration, selectedNoteConfig.isDotted);
+            if (currentBeats + newNoteBeat > BEATS_PER_MEASURE + 0.001) {
+                alert(`이 마디에는 박자가 넘칩니다! (${currentBeats}/${BEATS_PER_MEASURE} 박 채워짐)`);
+                return;
+            }
+
+            // Create New Note
+            const newNote = {
+                pitch: closestPitch.name,
+                octOffset: closestPitch.octOffset,
+                stepIndex: closestPitch.stepIndex,
+                duration: selectedNoteConfig.duration,
+                isDotted: selectedNoteConfig.isDotted,
+                type: selectedNoteConfig.type
+            };
+
+            currentMeasureNotes.push(newNote);
+            
+            // Audio Feedback on Placement
+            if (newNote.type === 'note') {
+                playPitchPreview(newNote.pitch);
+            }
+
+            updateBeatInfo();
+            drawStaff();
+        });
+
+        // --- Helper: Update Beat Counters ---
+        function updateBeatInfo() {
+            for (let i = 0; i < MAX_MEASURES; i++) {
+                const totalBeats = measuresData[i].reduce((sum, n) => sum + getBeatValue(n.duration, n.isDotted), 0);
+                const infoEl = document.getElementById(`measure-${i + 1}-info`);
+                infoEl.textContent = `${i + 1}마디: ${totalBeats} / 4 박`;
+                
+                if (totalBeats === BEATS_PER_MEASURE) {
+                    infoEl.className = "bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full border border-emerald-300 font-bold";
+                } else if (totalBeats > BEATS_PER_MEASURE) {
+                    infoEl.className = "bg-rose-100 text-rose-800 px-3 py-1 rounded-full border border-rose-300 font-bold";
+                } else {
+                    infoEl.className = "bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200";
+                }
+            }
+        }
+
+        // --- Rendering Logic (Canvas Staff & Symbols) ---
+        function drawStaff(activeMeasureIdx = -1, activeNoteIdx = -1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const startX = 120;
+            const endX = canvas.width - 20;
+            const measureWidth = (endX - startX) / MAX_MEASURES;
+            const topStaffY = 70;
+            const lineSpacing = 16;
+
+            // 1. Draw 5 Lines of Staff
+            ctx.strokeStyle = '#334155'; // Slate 700
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 5; i++) {
+                const y = topStaffY + i * lineSpacing;
+                ctx.beginPath();
+                ctx.moveTo(30, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+            }
+
+            // 2. Draw Clef (Treble Clef Symbol & Text)
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 64px serif';
+            ctx.fillText('🎼', 25, topStaffY + 48);
+
+            // 3. Draw Key Signatures (Accidentals)
+            ctx.font = 'bold 22px sans-serif';
+            ctx.fillStyle = '#b91c1c'; // Red-ish accent for key signatures
+
+            const alts = KEY_ALTERATIONS[currentKey];
+            let altX = 85;
+
+            if (currentKey === 'G') {
+                // Sharp on F5 (line 1, top line)
+                ctx.fillText('♯', altX, topStaffY + 6);
+            } else if (currentKey === 'D') {
+                // Sharps on F5, C5
+                ctx.fillText('♯', altX, topStaffY + 6);
+                ctx.fillText('♯', altX + 12, topStaffY + 30);
+            } else if (currentKey === 'F') {
+                // Flat on B4 (middle line)
+                ctx.fillText('♭', altX, topStaffY + 38);
+            } else if (currentKey === 'Bb') {
+                // Flats on B4, E5
+                ctx.fillText('♭', altX, topStaffY + 38);
+                ctx.fillText('♭', altX + 12, topStaffY + 14);
+            }
+
+            // 4. Draw Time Signature (4/4)
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 26px sans-serif';
+            ctx.fillText('4', startX - 22, topStaffY + 26);
+            ctx.fillText('4', startX - 22, topStaffY + 58);
+
+            // 5. Draw Measure Bar Lines
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#475569';
+            for (let i = 0; i <= MAX_MEASURES; i++) {
+                const x = startX + i * measureWidth;
+                ctx.beginPath();
+                ctx.moveTo(x, topStaffY);
+                ctx.lineTo(x, topStaffY + 4 * lineSpacing);
+                ctx.stroke();
+
+                // Final Double Bar Line
+                if (i === MAX_MEASURES) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - 5, topStaffY);
+                    ctx.lineTo(x - 5, topStaffY + 4 * lineSpacing);
+                    ctx.stroke();
+                }
+            }
+
+            // 6. Draw Notes & Rests in each measure
+            measuresData.forEach((measure, mIdx) => {
+                let accumBeats = 0;
+
+                measure.forEach((note, nIdx) => {
+                    const noteBeats = getBeatValue(note.duration, note.isDotted);
+                    const noteX = startX + (mIdx * measureWidth) + ((accumBeats + noteBeats / 2) / BEATS_PER_MEASURE) * measureWidth;
+                    
+                    const isHighlighted = (mIdx === activeMeasureIdx && nIdx === activeNoteIdx);
+                    
+                    if (note.type === 'rest') {
+                        drawRest(noteX, topStaffY + 2 * lineSpacing, note.duration, note.isDotted, isHighlighted);
+                    } else {
+                        // Calculate Y position based on stepIndex
+                        // F5 (stepIndex 10) -> top line (topStaffY)
+                        const noteY = topStaffY + (10 - note.stepIndex) * (lineSpacing / 2);
+                        drawNote(noteX, noteY, note, isHighlighted, topStaffY, lineSpacing);
+                    }
+
+                    accumBeats += noteBeats;
+                });
+            });
+        }
+
+        // Helper to draw single Note & Ledger Lines
+        function drawNote(x, y, note, isHighlighted, topStaffY, lineSpacing) {
+            ctx.save();
+            ctx.fillStyle = isHighlighted ? '#16a34a' : '#0f172a';
+            ctx.strokeStyle = isHighlighted ? '#16a34a' : '#0f172a';
+            ctx.lineWidth = 2.5;
+
+            // Draw Ledger Lines if out of 5-line staff bounds
+            if (note.stepIndex <= 0) { // C4 and below
+                for (let ly = topStaffY + 5 * lineSpacing; ly <= y + 2; ly += lineSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - 14, ly);
+                    ctx.lineTo(x + 14, ly);
+                    ctx.stroke();
+                }
+            } else if (note.stepIndex >= 12) { // A5 and above
+                for (let ly = topStaffY - lineSpacing; ly >= y - 2; ly -= lineSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x - 14, ly);
+                    ctx.lineTo(x + 14, ly);
+                    ctx.stroke();
+                }
+            }
+
+            // Render Note Head
+            const radiusX = 8;
+            const radiusY = 5.5;
+            const rotation = -0.25; // Slanted note head
+
+            ctx.beginPath();
+            if (note.duration === '1') {
+                // Whole Note (온음표 - 넓은 빈 머리, 줄기 없음)
+                ctx.ellipse(x, y, radiusX + 1.5, radiusY + 0.5, rotation, 0, 2 * Math.PI);
+                ctx.lineWidth = 3.5;
+                ctx.stroke();
+            } else if (note.duration === '2') {
+                // Half Note (2분음표 - 속이 뻥 뚫린 머리 + 굵은 테두리 + 줄기)
+                ctx.ellipse(x, y, radiusX, radiusY, rotation, 0, 2 * Math.PI);
+                ctx.fillStyle = '#ffffff'; // 백그라운드 지우기용 흰색 채우기
+                ctx.fill();
+                ctx.fillStyle = isHighlighted ? '#16a34a' : '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            } else {
+                // Quarter / Eighth Note (4분/8분음표 - 까맣게 채워진 머리)
+                ctx.ellipse(x, y, radiusX, radiusY, rotation, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Render Stem (2분, 4분, 8분 음표)
+            if (note.duration !== '1') {
+                const stemHeight = 36;
+                const isStemUp = note.stepIndex < 6; // Stem direction heuristic
+
+                ctx.beginPath();
+                if (isStemUp) {
+                    const stemX = x + radiusX - 1.5;
+                    ctx.moveTo(stemX, y - 1);
+                    ctx.lineTo(stemX, y - stemHeight);
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+
+                    // Eighth Note Flag (Up)
+                    if (note.duration === '8') {
+                        ctx.beginPath();
+                        ctx.moveTo(stemX, y - stemHeight);
+                        ctx.bezierCurveTo(stemX + 10, y - stemHeight + 8, stemX + 8, y - stemHeight + 22, stemX, y - stemHeight + 16);
+                        ctx.fill();
+                    }
+                } else {
+                    const stemX = x - radiusX + 1.5;
+                    ctx.moveTo(stemX, y + 1);
+                    ctx.lineTo(stemX, y + stemHeight);
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+
+                    // Eighth Note Flag (Down)
+                    if (note.duration === '8') {
+                        ctx.beginPath();
+                        ctx.moveTo(stemX, y + stemHeight);
+                        ctx.bezierCurveTo(stemX + 10, y + stemHeight - 8, stemX + 8, y + stemHeight - 22, stemX, y + stemHeight - 16);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            // Render Augmentation Dot (점음표 점)
+            if (note.isDotted) {
+                ctx.beginPath();
+                ctx.arc(x + 14, y - 2, 3.2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Pitch Label Overlay for kids' understanding
+            ctx.fillStyle = isHighlighted ? '#15803d' : '#64748b';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(note.pitch, x, y > topStaffY + 30 ? y - 14 : y + 22);
+
+            ctx.restore();
+        }
+
+        // Helper to draw Rest Symbols (정교한 캔버스 벡터 직접 드로잉)
+        function drawRest(x, centerY, duration, isDotted, isHighlighted) {
+            ctx.save();
+            ctx.fillStyle = isHighlighted ? '#16a34a' : '#1e293b';
+            ctx.strokeStyle = isHighlighted ? '#16a34a' : '#1e293b';
+            ctx.lineWidth = 2.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            const topStaffY = 70;
+            const lineSpacing = 16;
+
+            if (duration === '1') {
+                // Whole Rest (온쉼표: 2번째 줄 아래 매달린 사각형)
+                const y = topStaffY + lineSpacing;
+                ctx.fillRect(x - 9, y, 18, 8);
+                ctx.beginPath();
+                ctx.moveTo(x - 13, y);
+                ctx.lineTo(x + 13, y);
+                ctx.stroke();
+            } else if (duration === '2') {
+                // Half Rest (2분쉼표: 3번째 줄 위에 얹힌 사각형)
+                const y = topStaffY + 2 * lineSpacing;
+                ctx.fillRect(x - 9, y - 8, 18, 8);
+                ctx.beginPath();
+                ctx.moveTo(x - 13, y);
+                ctx.lineTo(x + 13, y);
+                ctx.stroke();
+            } else if (duration === '4') {
+                // Quarter Rest (4분쉼표: 지그재그 + 꼬리 기호 렌더링)
+                ctx.beginPath();
+                ctx.moveTo(x + 2, centerY - 20);
+                ctx.lineTo(x - 5, centerY - 8);
+                ctx.lineTo(x + 4, centerY + 3);
+                ctx.quadraticCurveTo(x - 6, centerY + 10, x - 2, centerY + 18);
+                ctx.stroke();
+            } else if (duration === '8') {
+                // Eighth Rest (8분쉼표: 깃발 및 원 기호 렌더링)
+                ctx.beginPath();
+                ctx.arc(x - 3, centerY - 8, 3, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(x - 2, centerY - 6);
+                ctx.quadraticCurveTo(x + 5, centerY - 8, x + 1, centerY - 2);
+                ctx.lineTo(x - 5, centerY + 16);
+                ctx.stroke();
+            }
+
+            // Dot for Dotted Rests (점쉼표 점)
+            if (isDotted) {
+                ctx.beginPath();
+                ctx.arc(x + 14, centerY - 2, 3.2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        // Initial Layout Render
+        window.addEventListener('load', () => {
+            updateBeatInfo();
+            drawStaff();
+        });
+    </script>
+</body>
+</html>
